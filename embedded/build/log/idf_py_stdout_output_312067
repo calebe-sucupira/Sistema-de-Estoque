@@ -1,0 +1,26 @@
+[1/20] Linking C static library esp-idf/json/libjson.a
+[2/20] Linking C static library esp-idf/mqtt/libmqtt.a
+[3/20] Linking C static library esp-idf/fatfs/libfatfs.a
+[4/20] Linking C static library esp-idf/spiffs/libspiffs.a
+[5/20] Building C object esp-idf/wifi_provisioning/CMakeFiles/__idf_wifi_provisioning.dir/proto-c/wifi_constants.pb-c.c.obj
+[6/20] Performing build step for 'bootloader'
+[1/1] cd /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/bootloader/esp-idf/esptool_py && /home/calebe/.espressif/python_env/idf5.4_py3.10_env/bin/python /home/calebe/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/bootloader/bootloader.bin
+Bootloader binary size 0x6580 bytes. 0xa80 bytes (9%) free.
+[7/18] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+[8/18] Building C object esp-idf/wifi_provisioning/CMakeFiles/__idf_wifi_provisioning.dir/proto-c/wifi_ctrl.pb-c.c.obj
+[9/18] Building C object esp-idf/wifi_provisioning/CMakeFiles/__idf_wifi_provisioning.dir/proto-c/wifi_scan.pb-c.c.obj
+[10/18] Building C object esp-idf/wifi_provisioning/CMakeFiles/__idf_wifi_provisioning.dir/src/scheme_softap.c.obj
+[11/18] Linking C static library esp-idf/wifi_provisioning/libwifi_provisioning.a
+[12/18] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/src/mfrc522.c.obj
+[13/18] Linking C static library esp-idf/main/libmain.a
+[14/18] Generating ld/sections.ld
+[15/18] Building C object CMakeFiles/embedded.elf.dir/project_elf_src_esp32.c.obj
+[16/18] Linking CXX executable embedded.elf
+[17/18] Generating binary image from built executable
+esptool.py v4.8.1
+Creating esp32 image...
+Merged 2 ELF sections
+Successfully created esp32 image.
+Generated /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/embedded.bin
+[18/18] cd /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/esp-idf/esptool_py && /home/calebe/.espressif/python_env/idf5.4_py3.10_env/bin/python /home/calebe/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/partition_table/partition-table.bin /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/embedded.bin
+embedded.bin binary size 0x38840 bytes. Smallest app partition is 0x100000 bytes. 0xc77c0 bytes (78%) free.

@@ -1,0 +1,5 @@
+[1/4] cd /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/esp-idf/esptool_py && /home/calebe/.espressif/python_env/idf5.4_py3.10_env/bin/python /home/calebe/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/partition_table/partition-table.bin /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/embedded.bin
+embedded.bin binary size 0xe0630 bytes. Smallest app partition is 0x100000 bytes. 0x1f9d0 bytes (12%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/bootloader/esp-idf/esptool_py && /home/calebe/.espressif/python_env/idf5.4_py3.10_env/bin/python /home/calebe/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/calebe/Documentos/Faculdade/Sistema-de-Estoque/embedded/build/bootloader/bootloader.bin
+Bootloader binary size 0x6580 bytes. 0xa80 bytes (9%) free.
