@@ -2,12 +2,15 @@ import paho.mqtt.client as mqtt
 import psycopg2
 import datetime
 import json
+import unicodedata  
+import string
 
 MQTT_BROKER_URL = "192.168.18.73"
 MQTT_USERNAME = "calebe"
 MQTT_PASSWORD = "8811"
 MQTT_TOPIC = "rfid/scanner/uid"
 MQTT_TOPIC_NOT_FOUND = "rfid/scanner/uid/not_found"
+MQTT_TOPIC_RESPONSE = "rfid/scanner/response"
 
 DB_HOST = "192.168.18.10"
 DB_PORT = "5432"
@@ -15,16 +18,25 @@ DB_NAME = "inventario_teste"
 DB_USER = "gislenojr"
 DB_PASS = "1234"
 
+
+def limpar_para_lcd(texto):
+    """Filtra o texto para conter apenas caracteres ASCII imprimíveis."""
+    if texto is None:
+        return ""
+    
+    nfkd_form = unicodedata.normalize('NFD', texto)
+    sem_acentos = "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+    
+    caracteres_permitidos = string.ascii_letters + string.digits + string.punctuation + ' '
+    texto_final = "".join([c for c in sem_acentos if c in caracteres_permitidos])
+    
+    return texto_final
+
+
 def conectar_banco():
     """Conecta ao banco de dados PostgreSQL na rede."""
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS
-        )
+        conn = psycopg2.connect(host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
         print(f"Conectado ao banco de dados PostgreSQL em {DB_HOST}")
         return conn
     except psycopg2.Error as e:
@@ -33,62 +45,53 @@ def conectar_banco():
 
 def atualizar_status_item(conn, uid, mqtt_client):
     """
-    Verifica o status atual de um item, o alterna, e atualiza o banco de dados
-    com o timestamp sem os microssegundos.
+    Verifica o status, alterna, e envia respostas para os tópicos corretos,
+    tratando os caracteres para o LCD.
     """
     if not conn:
-        print("Não há conexão com o banco de dados para atualizar.")
         return
-
-    # =======================================================
-    # ==                 MUDANÇA APLICADA AQUI             ==
-    # =======================================================
-    # Sua sugestão, perfeitamente aplicada para remover os microssegundos.
     timestamp_atual = datetime.datetime.now().replace(microsecond=0)
     uid_limpo = uid.strip()
 
     try:
         cursor = conn.cursor()
-        
-        sql_select = "SELECT rfid, status FROM itens WHERE UPPER(TRIM(rfid)) = UPPER(%s)"
+        sql_select = "SELECT nome, status FROM itens WHERE UPPER(TRIM(rfid)) = UPPER(%s)"
         cursor.execute(sql_select, (uid_limpo,))
         item = cursor.fetchone()
 
         if item:
-            status_atual = item[1]
-            novo_status = ""
+            nome_item, status_atual = item[0], item[1]
+            novo_status = "Emprestado" if status_atual == "Disponivel" else "Disponivel"
 
-            print(f"✓ Item encontrado: UID '{uid_limpo}', Status Atual: '{status_atual}'")
-
-            if status_atual == "Disponível":
-                novo_status = "Emprestado"
-            elif status_atual == "Emprestado":
-                novo_status = "Disponível"
-            else:
-                print(f"  - Status '{status_atual}' não é padrão. Alterando para 'Emprestado'.")
-                novo_status = "Emprestado"
-            
             sql_update = "UPDATE itens SET status = %s, ultima_atualizacao = %s WHERE UPPER(TRIM(rfid)) = UPPER(%s)"
             cursor.execute(sql_update, (novo_status, timestamp_atual, uid_limpo))
-            
             conn.commit()
-            print(f"✓ ATUALIZADO NO BANCO: Status do item '{uid_limpo}' alterado de '{status_atual}' para '{novo_status}'.")
+            print(f"✓ ATUALIZADO NO BANCO: Item '{nome_item}' alterado para '{novo_status}'.")
+
+            nome_limpo_para_lcd = limpar_para_lcd(nome_item)
+            status_limpo_para_lcd = limpar_para_lcd(novo_status)
+
+            response_payload_lcd = json.dumps({"nome": nome_limpo_para_lcd, "status": status_limpo_para_lcd})
+            mqtt_client.publish(MQTT_TOPIC_RESPONSE, response_payload_lcd)
+            print(f"✓ Resposta de sucesso ('{nome_limpo_para_lcd}', '{status_limpo_para_lcd}') enviada para o ESP32.")
 
         else:
             print(f"✗ Item não encontrado no banco para o UID: {uid_limpo}")
-            hora_formatada = timestamp_atual.strftime("%H:%M:%S")
-            message_payload = json.dumps({"uid": uid, "hora_leitura": hora_formatada})
-            mqtt_client.publish(MQTT_TOPIC_NOT_FOUND, message_payload)
-            print(f"✓ UID '{uid_limpo}' publicado no tópico de não encontrados com a hora '{hora_formatada}'")
+            
+            response_payload_lcd = json.dumps({"erro": "Nao cadastrado"})
+            mqtt_client.publish(MQTT_TOPIC_RESPONSE, response_payload_lcd)
+            print(f"✓ Resposta de 'não cadastrado' enviada para o ESP32.")
+
+            response_payload_notfound = json.dumps({"uid": uid_limpo, "hora": timestamp_atual.strftime("%H:%M:%S")})
+            mqtt_client.publish(MQTT_TOPIC_NOT_FOUND, response_payload_notfound)
+            print(f"✓ Alerta de UID não encontrado enviado para o tópico '{MQTT_TOPIC_NOT_FOUND}'.")
         
         cursor.close()
     except psycopg2.Error as e:
         print(f"✗ Erro ao interagir com o banco de dados: {e}")
         conn.rollback()
 
-
 def on_message(client, userdata, msg):
-    """Função chamada quando uma mensagem JSON é recebida do broker."""
     json_string = msg.payload.decode("utf-8")
     print(f"\nMensagem JSON recebida no tópico '{msg.topic}': {json_string}")
     try:
@@ -113,11 +116,15 @@ if __name__ == "__main__":
     db_conn = conectar_banco()
     if not db_conn:
         exit(1)
-
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, userdata={'db_conn': db_conn})
+    
+    user_data = {'db_conn': db_conn}
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, userdata=user_data)
+    
     client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.on_connect = on_connect
     client.on_message = on_message
+    
+    client.user_data_set(user_data)
     client._userdata['mqtt_client'] = client
 
     try:
